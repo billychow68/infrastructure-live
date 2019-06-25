@@ -1,9 +1,9 @@
 
 module "frontend" {
   #source   = "/Users/billy/git/infrastructure-modules//modules/frontend-app"
-  source = "git::git@github.com:billychow68/infrastructure-modules.git//modules//frontend-app?ref=v0.0.2"
-  min_size = 1
-  max_size = 2
+  source = "git::git@github.com:billychow68/infrastructure-modules.git//modules//frontend-app?ref=v0.0.1"
+  min_size = 2
+  max_size = 4
 }
 
 # THIS BREAKS THE MIN_SIZE, MAX_SIZE VARIABLE INPUT, WHY?
