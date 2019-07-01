@@ -16,40 +16,78 @@ resource "aws_vpc" "prod-vpc" {
   }
 }
 # ---------------------------------------------------------------------------------------------------------------------
-# internet gateway for region us-east-1
+# internet gateway for region us-east-1, route table + routes
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_internet_gateway" "prod-igw"{
   vpc_id = "${aws_vpc.prod-vpc.id}"
   tags = {
     Name = "prod-igw"
   }
-  # lifecycle {
-  #   create_before_destroy = false
-  # }
 }
-# ---------------------------------------------------------------------------------------------------------------------
-# route table for IGW (QUESTION: Can I use the default route table or create this new one?)
-# ---------------------------------------------------------------------------------------------------------------------
-resource "aws_route_table" "route-table" {
+resource "aws_route_table" "prod-igw-rt" {
   vpc_id = "${aws_vpc.prod-vpc.id}"
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = "${aws_internet_gateway.prod-igw.id}"
   }
   tags = {
-    Name = "prod-route-igw"
+    Name = "prod-rt-igw"
   }
 }
-# ---------------------------------------------------------------------------------------------------------------------
-# route table association with public subnets
-# ---------------------------------------------------------------------------------------------------------------------
-resource "aws_route_table_association" "prod-rt-assoc-1" {
-  subnet_id = "${aws_subnet.prod_pub_subnet_us-east-1a.id}"
-  route_table_id = "${aws_route_table.route-table.id}"
+resource "aws_route_table_association" "prod-igw-rt-assoc-1" {
+  subnet_id       = "${aws_subnet.prod_pub_subnet_us-east-1a.id}"
+  route_table_id  = "${aws_route_table.prod-igw-rt.id}"
 }
-resource "aws_route_table_association" "prod-rt-assoc-2" {
+resource "aws_route_table_association" "prod-igw-rt-assoc-2" {
   subnet_id = "${aws_subnet.prod_pub_subnet_us-east-1b.id}"
-  route_table_id = "${aws_route_table.route-table.id}"
+  route_table_id = "${aws_route_table.prod-igw-rt.id}"
+}
+# ---------------------------------------------------------------------------------------------------------------------
+# NAT gateway for region us-east-1x, elastic IP, route table + routes
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_eip" "prod-nat-eip-1a" {
+  tags = {
+    Name = "prod-nat-eip-1a"
+  }
+}
+resource "aws_nat_gateway" "prod-ngw-1a" {
+  allocation_id = "${aws_eip.prod-nat-eip-1a.id}"
+  subnet_id     = "${aws_subnet.prod_priv_subnet_us-east-1a.id}"
+  tags = {
+    Name        = "prod-ngw-1a"
+  }
+  depends_on    = ["aws_internet_gateway.prod-igw"]
+}
+resource "aws_eip" "prod-nat-eip-1b" {
+  tags = {
+    Name = "prod-nat-eip-1b"
+  }
+}
+resource "aws_nat_gateway" "prod-ngw-1b" {
+  allocation_id = "${aws_eip.prod-nat-eip-1b.id}"
+  subnet_id     = "${aws_subnet.prod_priv_subnet_us-east-1b.id}"
+  tags = {
+    Name        = "prod-ngw-1b"
+  }
+  depends_on    = ["aws_internet_gateway.prod-igw"]
+}
+resource "aws_route_table" "prod-ngw-rt" {
+  vpc_id = "${aws_vpc.prod-vpc.id}"
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_nat_gateway.prod-ngw-1a.id}"
+  }
+  tags = {
+    Name = "prod-rt-igw-1a"
+  }
+}
+resource "aws_route_table_association" "prod-ngw-rt-assoc-1a" {
+  subnet_id = "${aws_subnet.prod_priv_subnet_us-east-1a.id}"
+  route_table_id = "${aws_route_table.prod-ngw-rt.id}"
+}
+resource "aws_route_table_association" "prod-ngw-rt-assoc-1b" {
+  subnet_id = "${aws_subnet.prod_priv_subnet_us-east-1b.id}"
+  route_table_id = "${aws_route_table.prod-ngw-rt.id}"
 }
 # ---------------------------------------------------------------------------------------------------------------------
 # public and private subnets for AZ us-east-1a
