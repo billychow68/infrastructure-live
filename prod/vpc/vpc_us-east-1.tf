@@ -52,26 +52,13 @@ resource "aws_eip" "prod-nat-eip-1a" {
 }
 resource "aws_nat_gateway" "prod-ngw-1a" {
   allocation_id = "${aws_eip.prod-nat-eip-1a.id}"
-  subnet_id     = "${aws_subnet.prod_priv_subnet_us-east-1a.id}"
+  subnet_id     = "${aws_subnet.prod_pub_subnet_us-east-1a.id}"
   tags = {
     Name        = "prod-ngw-1a"
   }
   depends_on    = ["aws_internet_gateway.prod-igw"]
 }
-resource "aws_eip" "prod-nat-eip-1b" {
-  tags = {
-    Name = "prod-nat-eip-1b"
-  }
-}
-resource "aws_nat_gateway" "prod-ngw-1b" {
-  allocation_id = "${aws_eip.prod-nat-eip-1b.id}"
-  subnet_id     = "${aws_subnet.prod_priv_subnet_us-east-1b.id}"
-  tags = {
-    Name        = "prod-ngw-1b"
-  }
-  depends_on    = ["aws_internet_gateway.prod-igw"]
-}
-resource "aws_route_table" "prod-ngw-rt" {
+resource "aws_route_table" "prod-ngw-rt_1a" {
   vpc_id = "${aws_vpc.prod-vpc.id}"
   route {
     cidr_block = "0.0.0.0/0"
@@ -83,11 +70,34 @@ resource "aws_route_table" "prod-ngw-rt" {
 }
 resource "aws_route_table_association" "prod-ngw-rt-assoc-1a" {
   subnet_id = "${aws_subnet.prod_priv_subnet_us-east-1a.id}"
-  route_table_id = "${aws_route_table.prod-ngw-rt.id}"
+  route_table_id = "${aws_route_table.prod-ngw-rt_1a.id}"
+}
+resource "aws_eip" "prod-nat-eip-1b" {
+  tags = {
+    Name = "prod-nat-eip-1b"
+  }
+}
+resource "aws_nat_gateway" "prod-ngw-1b" {
+  allocation_id = "${aws_eip.prod-nat-eip-1b.id}"
+  subnet_id     = "${aws_subnet.prod_pub_subnet_us-east-1b.id}"
+  tags = {
+    Name        = "prod-ngw-1b"
+  }
+  depends_on    = ["aws_internet_gateway.prod-igw"]
+}
+resource "aws_route_table" "prod-ngw-rt_1b" {
+  vpc_id = "${aws_vpc.prod-vpc.id}"
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_nat_gateway.prod-ngw-1b.id}"
+  }
+  tags = {
+    Name = "prod-rt-igw-1b"
+  }
 }
 resource "aws_route_table_association" "prod-ngw-rt-assoc-1b" {
   subnet_id = "${aws_subnet.prod_priv_subnet_us-east-1b.id}"
-  route_table_id = "${aws_route_table.prod-ngw-rt.id}"
+  route_table_id = "${aws_route_table.prod-ngw-rt_1b.id}"
 }
 # ---------------------------------------------------------------------------------------------------------------------
 # public and private subnets for AZ us-east-1a
